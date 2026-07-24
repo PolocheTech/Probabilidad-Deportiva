@@ -65,65 +65,134 @@ estadisticas_equipo = estadisticas_local.join(estadisticas_visitante)
 print(f"\n== Estadisticas de los partidos jugados de cada equipo siendo local y visitante ==\n\n{estadisticas_equipo}")
 
 
-# -- Promedio de goles anotados de Local, Visitante y en la liga
-local_promedio_goles = datos_limpios['FTHG'].mean()
-print(f"\n== Promedio de goles anotados de Local ==\n\n{local_promedio_goles:.5f}")
-
-
-# -- Promedio de goles anotados de Visitante
-visitante_promedio_goles = datos_limpios['FTAG'].mean()
-print(f"\n== Promedio de goles anotados de Visitante ==\n\n{visitante_promedio_goles:.5f}")
-
 
 # -- Promedio de goles en la liga
-liga_promedio_goles = (local_promedio_goles + visitante_promedio_goles) / 2
-print(f"\n== Promedio de goles en la liga ==\n\n{liga_promedio_goles:.5f}")
+def obtener_forma_reciente(equipo, es_local):
+    
+    if es_local:
+        ultimos_partidos = datos_limpios[datos_limpios['HomeTeam'] == equipo]
+        ultimos_partidos = ultimos_partidos.sort_values('Date', ascending=False)
+        ultimos_partidos = ultimos_partidos.head(5)
+        ultimos_partidos_local = ultimos_partidos['FTHG'].mean()
+        ultimos_partidos_visitante = ultimos_partidos['FTAG'].mean()
+        return ultimos_partidos_local, ultimos_partidos_visitante
+
+    else:
+        ultimos_partidos = datos_limpios[datos_limpios['AwayTeam'] == equipo]
+        ultimos_partidos = ultimos_partidos.sort_values('Date', ascending=False)
+        ultimos_partidos = ultimos_partidos.head(5)
+        ultimos_partidos_local = ultimos_partidos['FTAG'].mean()
+        ultimos_partidos_visitante = ultimos_partidos['FTHG'].mean()
+        return ultimos_partidos_local, ultimos_partidos_visitante
+        
 
 
-# -- Calculo de la probabilidad de goles anotados por cada equipo
-consulta_equipos1 = estadisticas_equipo.loc['Liverpool']
-consulta_equipos2 = estadisticas_equipo.loc['Arsenal']
+# Funcion para sacar los porcentajes y predecir los resultados de las posibles victorias en las apuestas
+def predecir_partido():
+    print("\nBienvenido al Club de Analisis\n-- Equipos disponibles --\n")
+    for equipo in estadisticas_equipo.index:
+        print(equipo)
+
+    print("\nEquipos para analizar\n")
+    equipo_local = input("Ingresar el nombre del primer equipo\n>>> ").title()
+    equipo_visitante = input("Ingresar el nombre del segundo equipo\n>>> ").title()
+
+    if equipo_local not in estadisticas_equipo.index:
+        print("Equipo inexistente")
+        return
+    
+    if equipo_visitante not in estadisticas_equipo.index:
+        print("Equipo inexistente")
+        return
+    
+    # -- Promedio de goles anotados de Local, Visitante y en la liga
+    local_promedio_goles = datos_limpios['FTHG'].mean()
+    print(f"\n== Promedio de goles anotados de Local ==\n\n{local_promedio_goles:.5f}")
+
+    # -- Promedio de goles anotados de Visitante
+    visitante_promedio_goles = datos_limpios['FTAG'].mean()
+    print(f"\n== Promedio de goles anotados de Visitante ==\n\n{visitante_promedio_goles:.5f}")
 
 
-# Calculo de la probabilidad de goles anotados por cada equipo
-lambda_local = consulta_equipos1['local_media_goles_anotados'] * consulta_equipos2['visitante_media_goles_recibidos'] / liga_promedio_goles
-print(f"\n== Lambda Local ==\n\n{lambda_local:.5f}")
+    liga_promedio_goles = (local_promedio_goles + visitante_promedio_goles) / 2
+    print(f"\n== Promedio de goles en la liga ==\n\n{liga_promedio_goles:.5f}\n")
+
+    print("="*40)
+
+    # consulta_equipos1 = estadisticas_equipo.loc[equipo_local]
+    # consulta_equipos2 = estadisticas_equipo.loc[equipo_visitante]
+
+    goles_anotados_local, goles_recibidos_local = obtener_forma_reciente(equipo_local, True)
+    print(f"\nGoles anotados el equipo local {equipo_local}: {goles_anotados_local}\n\ngoles recibidos: {goles_recibidos_local}\n")
+    
+    print("="*40)
+
+    goles_anotados_visitante, goles_recibidos_visitante = obtener_forma_reciente(equipo_visitante, False)
+    print(f"\nGoles anotados el equipo visitante {equipo_visitante}: {goles_anotados_visitante}\n\ngoles recibidos: {goles_recibidos_visitante}\n")
+
+    print("="*40)
+
+    # Calculo de la probabilidad de goles anotados por cada equipo
+    lambda_local = goles_anotados_local * goles_recibidos_visitante / liga_promedio_goles
+    print(f"\n== Lambda Local ==\n\n{lambda_local:.5f}")
 
 
-# Calculo de la probabilidad de goles anotados por cada equipo
-lambda_visitante = consulta_equipos2['visitante_media_goles_anotados'] * consulta_equipos1['local_media_goles_recibidos'] / liga_promedio_goles
-print(f"\n== Lambda Visitante ==\n\n{lambda_visitante:.5f}")
+    # Calculo de la probabilidad de goles anotados por cada equipo
+    lambda_visitante = goles_anotados_visitante * goles_recibidos_local / liga_promedio_goles
+    print(f"\n== Lambda Visitante ==\n\n{lambda_visitante:.5f}")
+
+    goles_posibles = np.arange(0, 10)
+
+    # Calculo de la probabilidad de goles anotados por cada equipo
+    probabilidad_local = poisson.pmf(goles_posibles, lambda_local)
+    probabilidad_visitante = poisson.pmf(goles_posibles, lambda_visitante)
+    print(f"\nProbabilidad local: {probabilidad_local}\n\nProbabilidad Visitante: {probabilidad_visitante}\n")
+
+    # -- Calculo de la matriz de probabilidades
+    matriz_probabilidades = np.outer(probabilidad_local, probabilidad_visitante)
+    print("================================")
+    print(f"\n{equipo_local} vs {equipo_visitante}\n")
+    print("================================")
+
+    # -- Calculo de la probabilidad de victoria en Local
+    probabilidad_victoria_local = np.tril(matriz_probabilidades, k=-1).sum()
+    print(f"\n{equipo_local} gana: {probabilidad_victoria_local * 100:.2f}%\n")
 
 
-# -- Calculo de la probabilidad de goles anotados por cada equipo
-goles_posibles = np.arange(0, 6)
+    # -- Calculo de la probabilidad de empate
+    probabilidad_empate = np.diag(matriz_probabilidades).sum()
+    print(f"Empate: {probabilidad_empate * 100:.2f}%\n")
 
 
-# Calculo de la probabilidad de goles anotados por cada equipo
-probabilidad_local = poisson.pmf(goles_posibles, lambda_local)
-probabilidad_visitante = poisson.pmf(goles_posibles, lambda_visitante)
-print(f"\nProbabilidad local: {probabilidad_local}\n\nProbabilidad Visitante: {probabilidad_visitante}\n")
+    # -- Calculo de la probabilidad de victoria de Visitante
+    probabilidad_victoria_visitante = np.triu(matriz_probabilidades, k=1).sum()
+    print(f"{equipo_visitante} gana: {probabilidad_victoria_visitante * 100:.2f}%\n")
 
 
-# -- Calculo de la matriz de probabilidades
-matriz_probabilidades = np.outer(probabilidad_local, probabilidad_visitante)
-print(f"\n== Matriz de probabilidades ==\n\n{matriz_probabilidades}\n")
+    resultado = probabilidad_victoria_local + probabilidad_empate + probabilidad_victoria_visitante
+    print(f"Resultado: {resultado}\n")
 
 
-# -- Calculo de la probabilidad de victoria en Local
-probabilidad_victoria_local = np.tril(matriz_probabilidades, k=-1).sum()
-print(f"\n== Probabilidad de victoria en Local ==\n\n{probabilidad_victoria_local * 100:.2f}%\n")
+    over_25 = 0
+    under_25 = 0
 
+    for i in range(10):
+        for j in range(10):
+            if i + j >= 3:
+                over_25 += matriz_probabilidades[i][j]
+            else:
+                under_25 += matriz_probabilidades[i][j]
 
-# -- Calculo de la probabilidad de empate
-probabilidad_empate = np.diag(matriz_probabilidades).sum()
-print(f"\n== Probabilidad de empate ==\n\n{probabilidad_empate * 100:.2f}%\n")
+    print("="*40)
+    print(f"Más de 2.5 goles: {over_25 * 100:.2f}")
 
+    print("="*40)
+    print(f"Menos de 2.5 goles: {under_25 * 100:.2f}")
+    print("="*40)
 
-# -- Calculo de la probabilidad de victoria de Visitante
-probabilidad_victoria_visitante = np.triu(matriz_probabilidades, k=1).sum()
-print(f"\n== Probabilidad de victoria de Visitante ==\n\n{probabilidad_victoria_visitante * 100:.2f}%\n")
-
-
-resultado = probabilidad_victoria_local + probabilidad_empate + probabilidad_victoria_visitante
-print(resultado)
+while True:
+    predecir_partido()
+    continuar = input("\n¿Analizar otro partido? (s/n): ").strip().lower()
+    if continuar != 's':
+        print("Gracias por usar el algoritmo 'Fred'")
+        break

@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from scipy.stats import poisson
+import csv, os
+import datetime as dt
 
 pd.set_option('display.max_columns', None)
 
@@ -88,7 +90,7 @@ def obtener_forma_reciente(equipo, es_local):
 
 
 # Funcion para sacar los porcentajes y predecir los resultados de las posibles victorias en las apuestas
-def predecir_partido():
+def predecir_partido(escritor):
     print("\nBienvenido al Club de Analisis\n-- Equipos disponibles --\n")
     for equipo in estadisticas_equipo.index:
         print(equipo)
@@ -170,7 +172,7 @@ def predecir_partido():
 
 
     resultado = probabilidad_victoria_local + probabilidad_empate + probabilidad_victoria_visitante
-    print(f"Resultado: {resultado}\n")
+    print(f"Resultado: {resultado * 100:.2f}%\n")
 
 
     over_25 = 0
@@ -190,9 +192,22 @@ def predecir_partido():
     print(f"Menos de 2.5 goles: {under_25 * 100:.2f}")
     print("="*40)
 
-while True:
-    predecir_partido()
-    continuar = input("\n¿Analizar otro partido? (s/n): ").strip().lower()
-    if continuar != 's':
-        print("Gracias por usar el algoritmo 'Fred'")
-        break
+    fecha = dt.datetime.now().strftime('%Y-%m-%d')
+
+    escritor.writerow([fecha, equipo_local, equipo_visitante, goles_anotados_local, goles_anotados_visitante, goles_recibidos_local, goles_recibidos_visitante, round(lambda_local * 100, 2), round(lambda_visitante * 100, 2), round(probabilidad_victoria_local * 100, 2), round(probabilidad_empate * 100, 2), round(probabilidad_victoria_visitante * 100, 2)])
+
+archivo_existe = os.path.exists('resultados-analisis.csv')
+
+with open ('resultados-analisis.csv', 'a', newline='', encoding='utf-8') as archivo:
+    escritor = csv.writer(archivo)
+
+    if archivo_existe is False:
+        escritor.writerow(['fecha', 'equipo_local', 'equipo_visitante', 'goles_anotados_local', 'goles_anotados_visitante', 'goles_recibidos_local', 'goles_recibidos_visitante', 'lambda_local', 'lambda_visitante', '%probabilidad_victoria_local', '%probabilidad_empate', '%probabilidad_victoria_visitante'])
+
+    while True:
+
+        predecir_partido(escritor)
+        continuar = input("\n¿Analizar otro partido? (s/n): ").strip().lower()
+        if continuar != 's':
+            print("Gracias por usar el algoritmo 'Fred'")
+            break

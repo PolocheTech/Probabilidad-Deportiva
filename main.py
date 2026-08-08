@@ -14,22 +14,8 @@ np.set_printoptions(
 )
 
 
-# La funcion 'read_csv' se utiliza para leer unicamente archivos 'csv' esto ayudara para que con ayuda del codigo podamos obtener toda la información necesaria para despues crear analisis deportivos.
+# La funcion 'read_csv' lee el archivo 'premier-league1.csv'.
 leer_archivo = pd.read_csv("datos-partidos/premier-league1.csv")
-# print(leer_archivo)
-
-estructurar_archivo = leer_archivo.shape
-# print(f"\n-- Forma del Dataset --\n{estructurar_archivo}\n")
-
-primeras_filas = leer_archivo.head()
-# print(f"-- Lectura de las primeras filas --\n{primeras_filas}\n")
-
-columnas_tipos = leer_archivo.dtypes
-# print(f"-- Columnas y tipos de datos --\n{columnas_tipos}\n")
-
-valores_nulos = leer_archivo.isnull().sum()
-# print(f"-- Se mostraran las filas y columnas con valores nulos --\n{valores_nulos}")
-
 
 # -- Datos con columnas modificadas esto se hace con el fin de solo utilizar las columnas importantes para nosotros.
 # Dataframe
@@ -122,9 +108,6 @@ def predecir_partido(escritor):
 
     print("="*40)
 
-    # consulta_equipos1 = estadisticas_equipo.loc[equipo_local]
-    # consulta_equipos2 = estadisticas_equipo.loc[equipo_visitante]
-
     goles_anotados_local, goles_recibidos_local = obtener_forma_reciente(equipo_local, True)
     print(f"\nGoles anotados el equipo local {equipo_local}: {goles_anotados_local}\n\ngoles recibidos: {goles_recibidos_local}\n")
     
@@ -135,14 +118,8 @@ def predecir_partido(escritor):
 
     print("="*40)
 
-    # Calculo de la probabilidad de goles anotados por cada equipo
     lambda_local = goles_anotados_local * goles_recibidos_visitante / liga_promedio_goles
-    print(f"\n== Lambda Local ==\n\n{lambda_local:.5f}")
-
-
-    # Calculo de la probabilidad de goles anotados por cada equipo
     lambda_visitante = goles_anotados_visitante * goles_recibidos_local / liga_promedio_goles
-    print(f"\n== Lambda Visitante ==\n\n{lambda_visitante:.5f}")
 
     goles_posibles = np.arange(0, 10)
 
@@ -193,7 +170,18 @@ def predecir_partido(escritor):
 
     fecha = dt.datetime.now().strftime('%Y-%m-%d')
 
-    escritor.writerow([fecha, equipo_local, equipo_visitante, goles_anotados_local, goles_anotados_visitante, goles_recibidos_local, goles_recibidos_visitante, round(lambda_local * 100, 2), round(lambda_visitante * 100, 2), round(probabilidad_victoria_local * 100, 2), round(probabilidad_empate * 100, 2), round(probabilidad_victoria_visitante * 100, 2)])
+    escritor.writerow([fecha, 
+                    equipo_local, 
+                    equipo_visitante, 
+                    goles_anotados_local, 
+                    goles_anotados_visitante, 
+                    goles_recibidos_local, 
+                    goles_recibidos_visitante, 
+                    round(lambda_local * 100, 2), 
+                    round(lambda_visitante * 100, 2), 
+                    round(probabilidad_victoria_local * 100, 2), 
+                    round(probabilidad_empate * 100, 2), 
+                    round(probabilidad_victoria_visitante * 100, 2)])
 
     # Funcionalidad para saber cuantos goles pueden haber en el partido y cual podria ser el posible marcador.
     indice_maximo = np.argmax(matriz_probabilidades)
@@ -221,21 +209,30 @@ def predecir_partido(escritor):
 
     imagen_matriz_colorida = plt.imshow(matriz_probabilidades)
     plt.colorbar(imagen_matriz_colorida)
-    goles_visitante = plt.xlabel(f"Goles del visitante: {goles_anotados_visitante}%")
-    goles_local = plt.ylabel(f"Goles del local: {goles_anotados_local}%")
     plt.title(f"{equipo_local} vs {equipo_visitante}")
     plt.savefig('graficos-analisis/grafico.png')
     plt.show()
 
 
 
-archivo_existe = os.path.exists('resultados-analisis.csv')
+archivo_existe = os.path.exists('busqueda-analisis/resultados-analisis.csv')
 
-with open ('resultados-analisis.csv', 'a', newline='', encoding='utf-8') as archivo:
+with open ('busqueda-analisis/resultados-analisis.csv', 'a', newline='', encoding='utf-8') as archivo:
     escritor = csv.writer(archivo)
 
     if archivo_existe is False:
-        escritor.writerow(['fecha', 'equipo_local', 'equipo_visitante', 'goles_anotados_local', 'goles_anotados_visitante', 'goles_recibidos_local', 'goles_recibidos_visitante', 'lambda_local', 'lambda_visitante', '%probabilidad_victoria_local', '%probabilidad_empate', '%probabilidad_victoria_visitante'])
+        escritor.writerow(['fecha', 
+                        'equipo_local', 
+                        'equipo_visitante', 
+                        'goles_anotados_local', 
+                        'goles_anotados_visitante', 
+                        'goles_recibidos_local', 
+                        'goles_recibidos_visitante', 
+                        'lambda_local', 
+                        'lambda_visitante', 
+                        '%probabilidad_victoria_local', 
+                        '%probabilidad_empate', 
+                        '%probabilidad_victoria_visitante'])
 
     while True:
 

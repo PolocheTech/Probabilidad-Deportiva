@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import poisson
 import csv, os
 import datetime as dt
+import matplotlib.pyplot as plt
 
 pd.set_option('display.max_columns', None)
 
@@ -109,11 +110,11 @@ def predecir_partido(escritor):
     
     # -- Promedio de goles anotados de Local, Visitante y en la liga
     local_promedio_goles = datos_limpios['FTHG'].mean()
-    print(f"\n== Promedio de goles anotados de Local ==\n\n{local_promedio_goles:.5f}")
+    print(f"\n== Promedio de goles anotados de {equipo_local} ==\n\n{local_promedio_goles:.5f}")
 
     # -- Promedio de goles anotados de Visitante
     visitante_promedio_goles = datos_limpios['FTAG'].mean()
-    print(f"\n== Promedio de goles anotados de Visitante ==\n\n{visitante_promedio_goles:.5f}")
+    print(f"\n== Promedio de goles anotados de {equipo_visitante} ==\n\n{visitante_promedio_goles:.5f}")
 
 
     liga_promedio_goles = (local_promedio_goles + visitante_promedio_goles) / 2
@@ -174,10 +175,8 @@ def predecir_partido(escritor):
     resultado = probabilidad_victoria_local + probabilidad_empate + probabilidad_victoria_visitante
     print(f"Resultado: {resultado * 100:.2f}%\n")
 
-
     over_25 = 0
     under_25 = 0
-
     for i in range(10):
         for j in range(10):
             if i + j >= 3:
@@ -185,16 +184,50 @@ def predecir_partido(escritor):
             else:
                 under_25 += matriz_probabilidades[i][j]
 
-    print("="*40)
-    print(f"Más de 2.5 goles: {over_25 * 100:.2f}")
+    print("="*55)
+    print(f"Probabilidad de más de 2.5 goles: {over_25 * 100:.2f}%")
 
-    print("="*40)
-    print(f"Menos de 2.5 goles: {under_25 * 100:.2f}")
-    print("="*40)
+    print("="*55)
+    print(f"Probabilidad de menos de 2.5 goles: {under_25 * 100:.2f}%")
+    print("="*55)
 
     fecha = dt.datetime.now().strftime('%Y-%m-%d')
 
     escritor.writerow([fecha, equipo_local, equipo_visitante, goles_anotados_local, goles_anotados_visitante, goles_recibidos_local, goles_recibidos_visitante, round(lambda_local * 100, 2), round(lambda_visitante * 100, 2), round(probabilidad_victoria_local * 100, 2), round(probabilidad_empate * 100, 2), round(probabilidad_victoria_visitante * 100, 2)])
+
+    # Funcionalidad para saber cuantos goles pueden haber en el partido y cual podria ser el posible marcador.
+    indice_maximo = np.argmax(matriz_probabilidades)
+    fila, columna = np.unravel_index(indice_maximo, matriz_probabilidades.shape)
+    resultado_exacto = (matriz_probabilidades[fila, columna] * 100)
+    print(f"\nEl resultado más probable es\n--------------------------------\n{equipo_local}: {fila}\n{equipo_visitante}: {columna}\nResultado exacto: {resultado_exacto:.2f}%")
+
+    # Funcionalidad para saber si ambos equipos anotaran en el mismo partido.
+    ambos_equipos_anotan = 0
+    ambos_equipos_no_anotan = 0
+
+    for i in range(0, 10):
+        for j in range(0, 10):
+            if i >= 1 and j >= 1:
+                ambos_equipos_anotan += matriz_probabilidades[i][j]
+            else:
+                ambos_equipos_no_anotan += matriz_probabilidades[i][j]
+
+    print("-"*55)
+    print(f"\nLa probabilidad de que ambos equipos anoten es: {ambos_equipos_anotan * 100:.2f}%")
+
+    print("-"*55)
+    print(f"La probabilidad de que ambos equipos no anoten es: {ambos_equipos_no_anotan * 100:.2f}%")
+    print("-"*55)
+
+    imagen_matriz_colorida = plt.imshow(matriz_probabilidades)
+    plt.colorbar(imagen_matriz_colorida)
+    goles_visitante = plt.xlabel(f"Goles del visitante: {goles_anotados_visitante}%")
+    goles_local = plt.ylabel(f"Goles del local: {goles_anotados_local}%")
+    plt.title(f"{equipo_local} vs {equipo_visitante}")
+    plt.savefig('graficos-analisis/grafico.png')
+    plt.show()
+
+
 
 archivo_existe = os.path.exists('resultados-analisis.csv')
 
